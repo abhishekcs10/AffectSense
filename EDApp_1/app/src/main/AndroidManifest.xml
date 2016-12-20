@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="research.sg.edu.edapp">
+
+    <uses-permission android:name="android.permission.GET_TASKS" />
+    <uses-permission android:name="android.permission.READ_PHONE_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
+    <!-- Permission to start Alarm on device reboot -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+    <!-- Permission to get partial lock -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+
+    <!-- Permission for audio recording -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+
+    <!-- Permission for app usage access -->
+    <uses-permission xmlns:tools="http://schemas.android.com/tools"
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
+    <!-- Permission to network related access, internet connection -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_SMS" />
+    <uses-permission android:name="android.permission.READ_CALL_LOG" />
+    <uses-permission android:name="com.android.browser.permission.READ_HISTORY_BOOKMARKS" />
+
+    <application
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme">
+        <activity
+            android:name=".MainActivity"
+            android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".PerformRegistration"
+            android:label="@string/title_activity_perform_registration"></activity>
+        <activity
+            android:name=".UserConsent"
+            android:label="@string/title_activity_user_consent"></activity>
+
+        <receiver
+            android:name=".AlarmReceiver"
+            android:enabled="true"
+            android:exported="true"></receiver>
+
+        <service
+            android:name=".MasterService"
+            android:enabled="true"
+            android:exported="true"></service>
+        <service
+            android:name=".AppLoggingService"
+            android:enabled="true"
+            android:exported="true"></service>
+        <service
+            android:name=".SensorService"
+            android:enabled="true">
+            <intent-filter>
+                <action android:name="research.sg.edu.edapp.SensorService" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".FileUploadService"
+            android:exported="false"></service>
+        <service
+            android:name=".SMSCallBrowseService"
+            android:exported="false"></service>
+
+        <activity
+            android:name=".MoodRecorder"
+            android:label="@string/title_activity_mood_recorder">
+            <intent-filter>
+                <action android:name="research.sg.edu.edapp.MoodRecorder" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".KeyboardActivity"
+            android:label="@string/title_activity_keyboard"></activity>
+
+        <service
+            android:name=".kb.KbSoftKeyboard"
+            android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+
+        <activity
+            android:name=".KbImePreferences"
+            android:label="@string/settings_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name=".kb.KbContentProvider"
+            android:authorities="research.sg.edu.edapp.kb.KbContentProvider"
+            android:exported="true"
+            android:multiprocess="true"></provider>
+        <provider
+            android:name=".ESMContentProvider"
+            android:authorities="research.sg.edu.edapp.ESMContentProvider">
+
+            <!--
+            android:exported="true"
+            android:multiprocess="true"
+            -->
+        </provider>
+
+        <service
+            android:name=".MonitorService"
+            android:exported="false"></service>
+
+        <!--
+        receiver
+            android:name=".DeviceBootReceiver"
+            android:enabled="false"
+            android:exported="true" >
+        </receiver
+        -->
+        <receiver android:name=".DeviceBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+
+        <activity
+            android:name=".DisplayDashboard"
+            android:label="@string/title_activity_display_dashboard"></activity>
+        <activity
+            android:name=".ShareButtonActivity"
+            android:label="@string/title_activity_share_button"></activity>
+        <activity
+            android:name=".ShareonFB"
+            android:label="@string/title_activity_shareon_fb"></activity>
+        <activity android:name=".kb.Swype"></activity><!-- ATTENTION: This was auto-generated to add Google Play services to your project for
+     App Indexing.  See https://g.co/AppIndexing/AndroidStudio for more information. -->
+        <meta-data
+            android:name="com.google.android.gms.version"
+            android:value="@integer/google_play_services_version" />
+    </application>
+
+</manifest>

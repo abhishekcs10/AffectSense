@@ -1,0 +1,35 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:orientation="vertical"
+    android:weightSum="1">
+
+    <TextView android:text="@string/user_thank_you" android:layout_width="wrap_content" android:textAppearance="?android:attr/textAppearanceLarge"
+        android:layout_height="wrap_content" />
+
+    <TextView android:text="@string/blank_line" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <TextView android:text="@string/user_consent_kb_mood" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <TextView android:text="@string/blank_line" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <TextView android:text="@string/user_consent_do_capture" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <TextView android:text="@string/blank_line" android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+
+    <TextView android:text="@string/user_consent_dont_capture" android:layout_width="wrap_content" android:textAppearance="?android:attr/textAppearanceMedium"
+        android:layout_height="wrap_content" />
+
+    <Button
+        android:id="@+id/usr_ok"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:onClick="MoodPopup"
+        android:text="@string/usr_ok" />
+
+</LinearLayout>
