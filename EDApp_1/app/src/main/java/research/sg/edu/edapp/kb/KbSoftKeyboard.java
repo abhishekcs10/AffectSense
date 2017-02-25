@@ -19,8 +19,11 @@ package research.sg.edu.edapp.kb;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -43,13 +46,16 @@ import android.inputmethodservice.KeyboardView;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.support.v4.view.VelocityTrackerCompat;
 import android.telephony.TelephonyManager;
 import android.text.InputType;
 import android.text.method.MetaKeyKeyListener;
 import android.util.Log;
+import android.view.GestureDetector;
 import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
+import android.view.VelocityTracker;
 import android.view.View;
 import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
@@ -60,6 +66,8 @@ import android.widget.EditText;
 
 import research.sg.edu.edapp.R;
 
+import static java.lang.Math.abs;
+
 /**
  * Example of writing an input method for a soft keyboard.  This code is
  * focused on simplicity over completeness, so it should in no way be considered
@@ -67,8 +75,12 @@ import research.sg.edu.edapp.R;
  * a basic example for how you would get started writing an input method, to
  * be fleshed out as appropriate.
  */
+/*edit 0
+ * added GestureListener
+
+ */
 public class KbSoftKeyboard extends InputMethodService
-        implements KeyboardView.OnKeyboardActionListener, GestureDetector.OnGestureListener {
+        implements KeyboardView.OnKeyboardActionListener {
     static final boolean DEBUG = false;
     
     /**
@@ -83,7 +95,7 @@ public class KbSoftKeyboard extends InputMethodService
 
     private InputMethodManager mInputMethodManager;
 
-    private KbLatinKeyboardView mInputView;
+    private KbLatinKeyboardView mInputView;//kv_r
     private KbCandidateView mCandidateView;
     private CompletionInfo[] mCompletions;
     
@@ -91,13 +103,13 @@ public class KbSoftKeyboard extends InputMethodService
     private boolean mPredictionOn;
     private boolean mCompletionOn;
     private int mLastDisplayWidth;
-    private boolean mCapsLock;
+    private boolean mCapsLock;//capson_r
     private long mLastShiftTime;
     private long mMetaState;
     
     private KbLatinKeyboard mSymbolsKeyboard;
     private KbLatinKeyboard mSymbolsShiftedKeyboard;
-    private KbLatinKeyboard mQwertyKeyboard;
+    private KbLatinKeyboard mQwertyKeyboard; //keyboard
     
     private KbLatinKeyboard mCurKeyboard;
     
@@ -108,10 +120,129 @@ public class KbSoftKeyboard extends InputMethodService
 
     private static String tap_ctr="000000";
     private static String old_pkg="Dummy_Pkg";
-//added gesture detecture
-    private GestureDetector gDetect;
-    File grfile;
-    FileWriter writer;
+    //*****************************************edit1 started**************************************************
+    private String swipe="",test="",swipe2="";
+    private List<Keyboard.Key> keyList;
+    private double pressure,duration,velocity,start,end;
+    private VelocityTracker mvel=null;
+    private float old_x=0,old_y=0,olddir_x=0,olddir_y=0;
+    private Save_feature sf;
+    public static DataDBHelper featuredb;
+    private GetSwipeWord swipeWord;
+    double x_vel=0,y_vel=0;
+    int n_event=1,np_event=1;
+    char frequent_char=0;
+    public void retrieveKeys() {
+        keyList = mInputView.getKeyboard().getKeys();
+    }
+    //given motion event find which key character is at that particular coordinate
+    public char getkeylabel(MotionEvent event){
+        char c=0;
+        String s="";
+
+        // For each key in the key list
+        for (Keyboard.Key k : keyList) {
+            // If the coordinates from the Motion event are inside of the key
+            if (k.isInside((int) event.getX(), (int) event.getY())) {
+                // k is the key pressed
+                Log.d("Debugging",
+                        "Key pressed: key=" + k.label + " X=" + k.x + " - Y=" + k.y);
+                int centreX, centreY;
+                centreX = (k.width / 2) + k.x;
+                centreY = (k.width / 2) + k.x;
+                if (k.label != null) {
+                    s = k.label.toString();
+                    if (s.equals("SPACE") || s.equals("CAPS") || s.equals("DEL")) {
+                        Log.d("Debugging", "hereeeeee");
+                        //swipe="";
+                        c = 0;
+                    } else
+                        c = k.label.charAt(0);
+                    // These values are relative to the Keyboard View
+                    // Log.d("Debugging",
+                    //       "Centre of the key pressed: X="+centreX+" - Y="+centreY);
+
+                }
+            }
+        }
+
+        return c;
+    }
+    //funtion to retrieve key if direction has changed
+    public void check_change(MotionEvent event){
+
+        float new_x=event.getX(),new_y=event.getY();
+        // if(((new_x-old_x)>0 && olddir_x<0)||((new_x-old_x)<0 && olddir_x>0)){
+        swipe+=getkeylabel(event);
+        //}
+
+        //   if(((new_y-old_y)>0 && olddir_y<0)||((new_y-old_y)<0 && olddir_y>0)){
+        //  swipe+=getkeylabel(event);
+        //}
+    }
+    //get unique characters in string
+
+    public String get_final_string(String s){
+        String ans="",s2="";
+        int freq[]=new int[256];
+        int count=1,count1=1,count2=1,count3=1,len=s.length(),avg=0,iter=0;
+        char c1=0,c2=0,c3=0;
+        for(int i=0;i<s.length();i++){
+            if(s.charAt(i)>=97&&s.charAt(i)<=122)
+                s2+=s.charAt(i);
+        }
+        s=s2;
+        len=s.length();
+        if(len==0)
+        {
+            frequent_char=0;
+            return null;
+        }
+        if(len==1) {
+            frequent_char=0;
+            return s;
+        }
+        ans+=s.charAt(0);
+
+        //working method
+        count1=1;count2=1;
+        c1=s.charAt(0);
+        for(int i=1;i<len;i++){
+            if(s.charAt(i-1)==s.charAt(i)){
+                count1++;
+                continue;
+            }
+            else{
+                if(count1>count2){
+                    count2=count1;
+                    c1=s.charAt(i-1);
+
+                }
+                count1=1;
+                count+=1;
+            }
+        }
+        avg=len/count;
+        frequent_char=c1;
+        int current=1;
+
+        for(int i=1;i<len;i++){
+            if(s.charAt(i-1)==s.charAt(i)){
+                current+=1;
+                continue;
+            }
+            else{
+                if(current>avg & ans.charAt(ans.length()-1)!=s.charAt(i-1))
+                    ans+=s.charAt(i-1);
+                current=1;
+            }
+        }
+
+        return ans;
+    }
+
+
+    //*********************************************************edit 1 ended**************************************
     public static class RecentUseComparator implements Comparator<UsageStats> {
 
         @Override
@@ -154,7 +285,6 @@ public class KbSoftKeyboard extends InputMethodService
         mQwertyKeyboard = new KbLatinKeyboard(this, R.xml.qwerty);
         mSymbolsKeyboard = new KbLatinKeyboard(this, R.xml.symbols);
         mSymbolsShiftedKeyboard = new KbLatinKeyboard(this, R.xml.symbols_shift);
-
         sdCardRoot = Environment.getExternalStorageDirectory();
         dataDir = new File(sdCardRoot, getResources().getString(R.string.data_file_path));
 
@@ -175,13 +305,103 @@ public class KbSoftKeyboard extends InputMethodService
     @Override public View onCreateInputView() {
         mInputView = (KbLatinKeyboardView) getLayoutInflater().inflate(
                 R.layout.input, null);
-        mInputView.setOnKeyboardActionListener(this);
         mInputView.setKeyboard(mQwertyKeyboard);
+        mInputView.setOnKeyboardActionListener(this);
 
-        //added here
+
+        /****************************************************edit 2**************************************************************/
+
+        featuredb=new DataDBHelper(this);
         KbSoftKeyboard gd=new KbSoftKeyboard();
-        gDetect=new GestureDetector(this,gd);
-        //to here
+        sf=new Save_feature();
+        swipeWord=new GetSwipeWord(this);
+        //gDetect.setOnDoubleTapListener(gd);
+        mInputView.setOnTouchListener(new View.OnTouchListener(){
+            @Override
+            public boolean onTouch(View v, MotionEvent event){
+                int index = event.getActionIndex();
+                int action = event.getActionMasked();
+                int pointerId = event.getPointerId(index);
+
+
+
+                //check for actions of motion event
+                if (event.getAction()==MotionEvent.ACTION_DOWN){
+                    //retrieve key at current
+                    char ch=getkeylabel(event);
+                    if(ch>0)
+                        swipe+=ch;
+                    // test+=swipe.charAt(0);
+                    //set up start timer for measuring duration
+                    //  start=System.currentTimeMillis();
+                    //setup velocity tracker
+                    if(mvel == null) {
+                        // Retrieve a new VelocityTracker object to watch the velocity of a motion.
+                        mvel = VelocityTracker.obtain();
+                    }
+                    else {
+                        // Reset the velocity tracker back to its initial state.
+                        mvel.clear();
+                    }
+                }
+
+                if(event.getAction()==MotionEvent.ACTION_MOVE){
+                    mvel.addMovement(event);
+                    mvel.computeCurrentVelocity(1000);
+                    // Log velocity of pixels per second
+                    // Best practice to use VelocityTrackerCompat where possible.
+                    x_vel+= abs(VelocityTrackerCompat.getXVelocity(mvel,pointerId));
+                    y_vel+= abs(VelocityTrackerCompat.getYVelocity(mvel,pointerId));
+                    n_event+=1;
+                    //  Log.d("", "X velocity: " +  x_vel);
+                    //  Log.d("", "Y velocity: " +  y_vel);
+
+                }
+                if(event.getAction()== MotionEvent.ACTION_UP){
+                    //record time when finger lifted up
+                    //           end=System.currentTimeMillis();
+                    //calculate duration
+                    //         duration=(end-start)/100;
+                    //calculate velocity pixels per sec
+                    //  Log.d("", "X velocity: " +  x_vel);
+                    // Log.d("", "Y velocity: " +  y_vel);
+
+                    velocity=Math.sqrt(x_vel*x_vel+y_vel*y_vel);
+                    //obtain pressure
+                    pressure+=event.getPressure();
+                    np_event+=1;
+                    swipe2=get_final_string(swipe);
+                    swipe="";
+                    if(swipe2==null)
+                        swipe2="";
+                    //print generated string
+                    System.out.println(swipe+"\n 2nd "+ swipe2);
+                }
+
+                if(((int)old_x)==0 &((int) old_y)==0){
+                    old_x=event.getX();
+                    old_y=event.getY();
+                    swipe+=getkeylabel(event);
+                }
+                else if(((int)olddir_x)==0 &((int)olddir_y)==0){
+                    olddir_x=event.getX()-old_x;
+                    olddir_y=event.getY()-old_y;
+                    old_x=event.getX();
+                    old_y=event.getY();
+                }
+                else{
+                    check_change(event);
+                }
+
+                // Return false to avoid consuming the touch event
+                return false;
+            }
+        });
+
+
+        //***********************************************edit 2 end*****************************************************************
+
+
         //Saved my life
         if(mInputView.isPreviewEnabled())
             mInputView.setPreviewEnabled(false);
@@ -314,7 +534,25 @@ public class KbSoftKeyboard extends InputMethodService
             mInputView.closing();
         }
     }
-    
+
+    private void writeToFile(String data,Context context) {
+        try {
+            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(context.openFileOutput("config.txt", Context.MODE_PRIVATE));
+            outputStreamWriter.write(data);
+            outputStreamWriter.close();
+        }
+        catch (IOException e) {
+            Log.e("Exception", "File write failed: " + e.toString());
+        }
+    }
+
+
+    /* edit 3
+
+     */
+
+
+
     @Override public void onStartInputView(EditorInfo attribute, boolean restarting) {
         super.onStartInputView(attribute, restarting);
         // Apply the selected keyboard to the input view.
@@ -322,6 +560,7 @@ public class KbSoftKeyboard extends InputMethodService
         mInputView.closing();
         final InputMethodSubtype subtype = mInputMethodManager.getCurrentInputMethodSubtype();
         mInputView.setSubtypeOnSpaceKey(subtype);
+        retrieveKeys();
     }
 
     @Override
@@ -418,8 +657,8 @@ public class KbSoftKeyboard extends InputMethodService
      * We get first crack at them, and can either resume them or let them
      * continue to the app.
      */
-    String swipe="";
     @Override public boolean onKeyDown(int keyCode, KeyEvent event) {
+        String s=""+event.getUnicodeChar();
         Log.d("CAME HERE","CAME HERE");
         switch (keyCode) {
             case KeyEvent.KEYCODE_BACK:
@@ -643,7 +882,7 @@ public class KbSoftKeyboard extends InputMethodService
         RecentUseComparator mRecentComp =new RecentUseComparator();
 
         long ts = System.currentTimeMillis();
-        UsageStatsManager mUsageStatsManager = (UsageStatsManager)getSystemService("usagestats");
+        UsageStatsManager mUsageStatsManager = (UsageStatsManager)getSystemService(Context.USAGE_STATS_SERVICE);
         List<UsageStats> usageStats = mUsageStatsManager.queryUsageStats(UsageStatsManager.INTERVAL_BEST, ts-1000*10, ts);
         if (usageStats == null || usageStats.size() == 0) {
             //return NONE_PKG;
@@ -762,11 +1001,18 @@ public class KbSoftKeyboard extends InputMethodService
             //String.format("%05d", Integer.parseInt(mood_ctr));
             move_file(tap_file_name);
         }*/
-    	
+
+
+        /********************************************************important edit edit 6****************************************/
+        InputConnection ic = getCurrentInputConnection();
+        // playClick(primaryCode)
+        String suggested_string="";
+/***********************************************************check edit***********************************************/
         if (isWordSeparator(primaryCode)) {
             // Handle separator
             if (mComposing.length() > 0) {
                 commitTyped(getCurrentInputConnection());
+                swipe="";
             }
             sendKey(primaryCode);
             updateShiftKeyState(getCurrentInputEditorInfo());
@@ -793,7 +1039,34 @@ public class KbSoftKeyboard extends InputMethodService
                 current.setShifted(false);
             }
         } else {
-            handleCharacter(primaryCode, keyCodes);
+
+            /****************************************************************8default handling******************************************/
+            char code = (char) primaryCode;
+            if (swipe2.length() != 0 && code != swipe2.charAt(swipe2.length() - 1)) {
+                swipe2 += "+" + code;
+            }
+            if (frequent_char == 0 || frequent_char == code || frequent_char == test.charAt(0))
+                test += ".*" + code;
+            else
+                test += ".*" + frequent_char + ".*" + code;
+            Log.d("Pattern", test);
+            if (Character.isLetter(code) && mCapsLock) {
+                code = Character.toUpperCase(code);
+            }
+            if (swipe2.length() < 3) {
+                ic.commitText(String.valueOf(code), 1);
+                swipe = "";
+                swipe2 = "";
+            } else {
+                suggested_string = strings_matched(test);
+                suggested_string += " ";
+                if (suggested_string.length() <= 1) {
+                    ic.commitText(String.valueOf(code), 1);
+                } else
+                    ic.commitText(suggested_string, suggested_string.length());
+
+                //handleCharacter(primaryCode, keyCodes);
+            }
         }
     }
 
@@ -998,10 +1271,67 @@ int downKeyCode = -1;
     }
     
     public void onPress(int primaryCode) {
+//check larter
+        /*****************************************************************edit 4**********************************************/
+        String first=""+(char)primaryCode;
+        test+=(char)primaryCode;
+        Log.d("Like",first);
+        //swipe=(char)primaryCode+swipe;
+        //set up start timer for measuring duration
+        start=System.currentTimeMillis();
+
+        /*******************************************************8edit4 ended*********************************************/
+    }
+
+
+
+    /*************************************************edit5*****************************************************/
+    public String strings_matched(String regex){
+        System.out.println("Yaha");
+        ArrayList<String> suggest = swipeWord.get_suggestion(regex);
+        String result="";
+        int count=0;
+        for (String s : suggest) {
+            if (s.length() >= swipe2.length() - 2 && s.length() <= swipe2.length() + 2) {
+                System.out.println("Dictionary are " + s);
+                if(count==0)
+                    result=s;
+                count++;
+                if (count == 3)
+                    break;
+            }
+        }
+
+        return result;
 
     }
-    
+/******************************************************edit5 ended**************************************************************/
     public void onRelease(int primaryCode) {
+        /*********************************************edit3************************************************************/
+        if(!(primaryCode==Keyboard.KEYCODE_DELETE||primaryCode==Keyboard.KEYCODE_SHIFT||(char)primaryCode==' ')) {//record time when finger lifted up
+            end = System.currentTimeMillis();
+            //calculate duration
+            duration = (end - start) / 1000;
+            //pressure is pressure/nt
+            pressure = pressure / np_event;
+            Log.d("ans", "X velocity: " + x_vel / n_event);
+            Log.d("ans", "Y velocity: " + y_vel / n_event);
+            //save into database
+            sf.set_duration(duration);
+            sf.set_pressure(pressure);
+            sf.set_speed(velocity);
+            featuredb.add_feature(sf, this);
+            // featuredb.databasetoString();
+        }
+
+        //end saving
+        start=0;
+        end=0;
+        pressure=0;np_event=1;
+        x_vel=0;y_vel=0;n_event=1;
+        swipe="";
+        test="";
+        /****************************edit3 ended*************************************************************************/
     }
 
     public void setTapCtr() {
